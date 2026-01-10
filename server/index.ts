@@ -11,9 +11,12 @@ app.use(cors());
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CLIENT_URL || "*",
-    methods: ['GET', 'POST']
-  }
+    origin: [
+      "https://draw-guess-game-nine.vercel.app", // Vercel frontend
+      "http://localhost:5173" // local dev
+    ],
+    methods: ["GET", "POST"]
+  } 
 });
 
 // In-memory storage
@@ -244,6 +247,38 @@ io.on('connection', (socket) => {
 
     room.gameState = GameState.PLAYING;
     io.to(roomId).emit('game:started');
+    startNextRound(roomId);
+  });
+
+  // Restart game
+  socket.on('game:restart', ({ roomId }) => {
+    const room = rooms.get(roomId);
+    if (!room || socket.id !== room.host) return;
+
+    if (room.players.length < 2) {
+      socket.emit('error', { message: 'Need at least 2 players to start' });
+      return;
+    }
+
+    // Reset game state
+    room.gameState = GameState.PLAYING;
+    room.currentDrawer = null;
+    room.currentWord = null;
+    room.roundNumber = 0;
+    room.roundTimer = 0;
+    room.drawingData = [];
+    room.chatMessages = [];
+    
+    // Reset players
+    room.players.forEach(p => {
+      p.score = 0;
+      p.hasDrawn = false;
+    });
+
+    // Notify all players about restart
+    io.to(roomId).emit('game:restarted', { room });
+
+    // Start first round
     startNextRound(roomId);
   });
 

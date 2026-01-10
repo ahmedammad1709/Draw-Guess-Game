@@ -9,6 +9,7 @@ import Scoreboard from '@/components/Scoreboard';
 import Timer from '@/components/Timer';
 import JoinRequestModal from '@/components/JoinRequestModal';
 import GameNotifications from '@/components/GameNotifications';
+// @ts-ignore
 import confetti from 'canvas-confetti';
 
 export default function GameRoomPage() {
@@ -17,7 +18,7 @@ export default function GameRoomPage() {
   const navigate = useNavigate();
   const { socket } = useSocket();
 
-  const playerName = location.state?.playerName || '';
+  // const playerName = location.state?.playerName || '';
   const isHost = location.state?.isHost || false;
 
   const [room, setRoom] = useState<GameRoom | null>(null);
@@ -136,7 +137,7 @@ export default function GameRoomPage() {
       }
     });
 
-    socket.on('chat:message', (message: ChatMessage) => {
+    socket.on('chat:message', (_message: ChatMessage) => {
       // Handled by ChatBox component
     });
 
@@ -156,6 +157,13 @@ export default function GameRoomPage() {
       setRoom(prev => prev ? { ...prev, gameState: GameState.FINISHED } : null);
       addNotification('success', 'Game Over!');
       triggerConfetti();
+    });
+
+    socket.on('game:restarted', (data: any) => {
+      setGameOver(false);
+      setWinners([]);
+      setRoom(data.room); // The server sends the updated room state
+      addNotification('info', 'Game Restarted! Get ready!');
     });
 
     socket.on('room:closed', () => {
