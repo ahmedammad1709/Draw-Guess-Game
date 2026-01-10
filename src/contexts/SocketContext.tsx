@@ -25,7 +25,7 @@ export function SocketProvider({ children }: SocketProviderProps) {
 
   useEffect(() => {
     // Connect to Socket.IO server
-    const socketInstance = io('http://localhost:3001', {
+    const socketInstance = io(import.meta.env.VITE_API_URL || 'http://localhost:3001', {
       transports: ['websocket', 'polling']
     });
 
