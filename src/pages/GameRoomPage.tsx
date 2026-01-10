@@ -159,6 +159,16 @@ export default function GameRoomPage() {
       triggerConfetti();
     });
 
+    socket.on('game:restarted', (data: any) => {
+      setGameOver(false);
+      setWinners([]);
+      setRoom(data.room);
+      addNotification('info', 'Game Restarted! Get ready!');
+      if (canvasRef.current) {
+        canvasRef.current.clearCanvas();
+      }
+    });
+
     socket.on('room:closed', () => {
       addNotification('error', 'Room closed by host');
       setTimeout(() => navigate('/'), 2000);
@@ -182,6 +192,7 @@ export default function GameRoomPage() {
       socket.off('guess:correct');
       socket.off('round:end');
       socket.off('game:over');
+      socket.off('game:restarted');
       socket.off('room:closed');
       socket.off('error');
     };
