@@ -18,7 +18,7 @@ export default function GameRoomPage() {
   const navigate = useNavigate();
   const { socket } = useSocket();
 
-  // const playerName = location.state?.playerName || '';
+  const playerName = location.state?.playerName || '';
   const isHost = location.state?.isHost || false;
 
   const [room, setRoom] = useState<GameRoom | null>(null);
@@ -159,16 +159,13 @@ export default function GameRoomPage() {
       triggerConfetti();
     });
 
-    socket.on('game:restarted', (data: any) => {
-      setGameOver(false);
-      setWinners([]);
-      setRoom(data.room); // The server sends the updated room state
-      addNotification('info', 'Game Restarted! Get ready!');
-    });
-
     socket.on('room:closed', () => {
       addNotification('error', 'Room closed by host');
       setTimeout(() => navigate('/'), 2000);
+    });
+
+    socket.on('error', (data: any) => {
+      addNotification('error', data.message || 'An error occurred');
     });
 
     return () => {
@@ -186,12 +183,18 @@ export default function GameRoomPage() {
       socket.off('round:end');
       socket.off('game:over');
       socket.off('room:closed');
+      socket.off('error');
     };
   }, [socket, roomId, navigate]);
 
   const handleStartGame = () => {
     if (!socket || !roomId) return;
     socket.emit('game:start', { roomId });
+  };
+
+  const handlePlayAgain = () => {
+    if (!socket || !roomId) return;
+    socket.emit('game:restart', { roomId });
   };
 
   const handleApproveJoin = (playerId: string) => {
@@ -301,6 +304,14 @@ export default function GameRoomPage() {
               <h2 className="text-3xl font-bold text-center mb-6">🏆 Game Over!</h2>
               <Scoreboard players={winners} />
               <div className="mt-6 space-y-3">
+                {isHost && (
+                  <button
+                    onClick={handlePlayAgain}
+                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3 rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all"
+                  >
+                    🔄 Play Again
+                  </button>
+                )}
                 <button
                   onClick={() => navigate('/')}
                   className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-3 rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all"
