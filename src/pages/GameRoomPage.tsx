@@ -24,6 +24,7 @@ export default function GameRoomPage() {
   const [room, setRoom] = useState<GameRoom | null>(null);
   const [currentPlayerId, setCurrentPlayerId] = useState('');
   const [currentWord, setCurrentWord] = useState<string | null>(null);
+  const [wordOptions, setWordOptions] = useState<string[] | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showJoinRequests, setShowJoinRequests] = useState(false);
   const [gameOver, setGameOver] = useState(false);
@@ -121,6 +122,11 @@ export default function GameRoomPage() {
       addNotification('success', `Your word: ${data.word}`);
     });
 
+    socket.on('word:options', (data: any) => {
+      setWordOptions(data.options || []);
+      setCurrentWord(null);
+    });
+
     socket.on('timer:update', (data: any) => {
       setRoom(prev => prev ? { ...prev, roundTimer: data.timer } : null);
     });
@@ -185,6 +191,7 @@ export default function GameRoomPage() {
       socket.off('game:started');
       socket.off('round:start');
       socket.off('word:assigned');
+      socket.off('word:options');
       socket.off('timer:update');
       socket.off('draw:update');
       socket.off('draw:cleared');
@@ -201,6 +208,12 @@ export default function GameRoomPage() {
   const handleStartGame = () => {
     if (!socket || !roomId) return;
     socket.emit('game:start', { roomId });
+  };
+
+  const handleWordChoice = (word: string) => {
+    if (!socket || !roomId) return;
+    setWordOptions(null);
+    socket.emit('word:chosen', { roomId, word });
   };
 
   const handlePlayAgain = () => {
@@ -257,6 +270,26 @@ export default function GameRoomPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-4">
       <div className="max-w-7xl mx-auto">
+        {isDrawer && wordOptions && wordOptions.length > 0 && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40 p-4">
+            <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-sm w-full">
+              <h2 className="text-2xl font-bold text-center mb-4">Choose a word</h2>
+              <p className="text-gray-600 text-center mb-4">Select one word to draw</p>
+              <div className="grid grid-cols-1 gap-3">
+                {wordOptions.map(option => (
+                  <button
+                    key={option}
+                    onClick={() => handleWordChoice(option)}
+                    className="w-full bg-indigo-500 text-white font-bold py-2 rounded-lg hover:bg-indigo-600 transition-colors"
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-xl p-4 mb-4">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">

@@ -3,7 +3,7 @@ import { createServer } from 'node:http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import { GameRoom, Player, DrawingData, ChatMessage, GameState } from './types';
-import { getRandomWord } from './wordPool';
+import { getRandomWords } from './wordPool';
 
 const app = express();
 app.use(cors());
@@ -70,10 +70,8 @@ function startNextRound(roomId: string): void {
   const room = rooms.get(roomId);
   if (!room) return;
 
-  // Check if all players have drawn
   const allDrawn = room.players.every(p => p.hasDrawn);
   if (allDrawn) {
-    // Game over
     room.gameState = GameState.FINISHED;
     io.to(roomId).emit('game:over', {
       players: room.players.sort((a, b) => b.score - a.score)
@@ -81,21 +79,18 @@ function startNextRound(roomId: string): void {
     return;
   }
 
-  // Find next drawer
   const nextDrawer = room.players.find(p => !p.hasDrawn);
   if (!nextDrawer) return;
 
   room.currentDrawer = nextDrawer.id;
-  room.currentWord = getRandomWord();
+  room.currentWord = null;
   room.roundNumber++;
-  room.roundTimer = 75; // 75 seconds per round
+  room.roundTimer = 75;
   room.drawingData = [];
   room.gameState = GameState.PLAYING;
 
-  // Mark drawer as having drawn
   nextDrawer.hasDrawn = true;
 
-  // Notify all players
   io.to(roomId).emit('round:start', {
     drawerId: nextDrawer.id,
     drawerName: nextDrawer.name,
@@ -103,13 +98,8 @@ function startNextRound(roomId: string): void {
     timer: room.roundTimer
   });
 
-  // Send word only to drawer
-  io.to(nextDrawer.id).emit('word:assigned', {
-    word: room.currentWord
-  });
-
-  // Start timer
-  startRoundTimer(roomId);
+  const options = getRandomWords(4);
+  io.to(nextDrawer.id).emit('word:options', { options });
 }
 
 // Round timer
@@ -292,6 +282,21 @@ io.on('connection', (socket) => {
     setTimeout(() => {
       startNextRound(roomId);
     }, 1000);
+  });
+
+  socket.on('word:chosen', ({ roomId, word }) => {
+    const room = rooms.get(roomId);
+    if (!room) return;
+
+    if (socket.id !== room.currentDrawer) return;
+
+    room.currentWord = word;
+
+    io.to(room.currentDrawer).emit('word:assigned', {
+      word: room.currentWord
+    });
+
+    startRoundTimer(roomId);
   });
 
   // Drawing data
