@@ -18,7 +18,7 @@ export default function GameRoomPage() {
   const navigate = useNavigate();
   const { socket } = useSocket();
 
-  const playerName = location.state?.playerName || '';
+  // const playerName = location.state?.playerName || '';
   const isHost = location.state?.isHost || false;
 
   const [room, setRoom] = useState<GameRoom | null>(null);
