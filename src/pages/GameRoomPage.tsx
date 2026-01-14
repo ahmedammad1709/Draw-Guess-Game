@@ -204,7 +204,12 @@ export default function GameRoomPage() {
   };
 
   const handlePlayAgain = () => {
-    if (!socket || !roomId) return;
+    if (!socket || !roomId) {
+      console.error('Play again failed: socket or roomId missing');
+      return;
+    }
+    console.log('Emitting game:restart event for room', roomId);
+    addNotification('info', 'Restarting game...');
     socket.emit('game:restart', { roomId });
   };
 

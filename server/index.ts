@@ -253,7 +253,15 @@ io.on('connection', (socket) => {
   // Restart game
   socket.on('game:restart', ({ roomId }) => {
     const room = rooms.get(roomId);
-    if (!room || socket.id !== room.host) return;
+    if (!room) {
+      socket.emit('error', { message: 'Room not found' });
+      return;
+    }
+    
+    if (socket.id !== room.host) {
+      socket.emit('error', { message: 'Only the host can restart the game' });
+      return;
+    }
 
     if (room.players.length < 2) {
       socket.emit('error', { message: 'Need at least 2 players to start' });
@@ -277,9 +285,13 @@ io.on('connection', (socket) => {
 
     // Notify all players about restart
     io.to(roomId).emit('game:restarted', { room });
+    io.to(roomId).emit('game:started'); // Ensure clients know game is playing
 
     // Start first round
-    startNextRound(roomId);
+    // Small delay to ensure client state is updated
+    setTimeout(() => {
+      startNextRound(roomId);
+    }, 1000);
   });
 
   // Drawing data
